@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>패킹리스트 — 그로잉업</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#0f0f14;--s1:#1a1a24;--s2:#22222e;--border:#2c2c3e;--accent:#7c6ffd;--accent2:#a78bfa;--text:#efeffa;--muted:#7070a0;--ok:#34d399;--warn:#f87171;--r:12px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.hd{padding:18px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.hd-date{margin-left:auto;display:flex;flex-direction:column;gap:6px;}
+.date-lbl{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.5px;}
+.date-row{display:flex;gap:8px;align-items:center;}
+.cal-wrap{display:flex;align-items:center;gap:8px;padding:7px 13px;background:var(--s2);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .13s;position:relative;}
+.cal-wrap:hover{border-color:var(--accent);}
+.date-input-hidden{position:absolute;opacity:0;width:0;height:0;pointer-events:none;}
+.date-display{font-size:13px;color:var(--text);white-space:nowrap;min-width:100px;}
+.date-input-text{padding:7px 11px;background:var(--s2);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none;width:140px;}
+.date-input-text:focus{border-color:var(--accent);}
+.date-input-text::placeholder{color:var(--muted);}
+.hd-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:17px;}
+.hd-title{font-size:16px;font-weight:700;}
+.hd-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.layout{display:grid;grid-template-columns:240px 300px 1fr;min-height:calc(100vh - 73px);}
+.panel{border-right:1px solid var(--border);padding:20px 16px;overflow-y:auto;}
+.panel:last-child{border-right:none;}
+.ptitle{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.group-block{margin-bottom:18px;}
+.group-name{font-size:15px;font-weight:700;color:var(--accent2);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.group-name::before{content:"";width:3px;height:16px;background:var(--accent);border-radius:2px;display:inline-block;}
+.prod-list{display:flex;flex-direction:column;gap:4px;}
+.pbtn{background:var(--s1);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;cursor:pointer;text-align:left;color:var(--text);font-family:inherit;font-size:14px;font-weight:500;transition:all .14s;width:100%;}
+.pbtn:hover{border-color:var(--accent);background:rgba(124,111,253,.08);}
+.pbtn.on{border-color:var(--accent);background:rgba(124,111,253,.18);font-weight:700;color:#fff;}
+.opt-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--muted);gap:8px;text-align:center;font-size:13px;line-height:1.8;}
+.sel-name{font-size:18px;font-weight:700;margin-bottom:4px;}
+.sel-group{font-size:12px;color:var(--muted);margin-bottom:20px;}
+.opt-section{margin-bottom:18px;}
+.opt-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:9px;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:30px;font-size:13px;border:1.5px solid var(--border);background:var(--s2);color:#b0b0cc;cursor:pointer;font-family:inherit;font-weight:500;transition:all .13s;white-space:nowrap;}
+.chip:hover{border-color:var(--accent2);color:var(--text);}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
+.dot{width:9px;height:9px;border-radius:50%;border:1px solid rgba(255,255,255,.25);flex-shrink:0;}
+.cinput{display:flex;gap:5px;margin-top:8px;}
+.cinput input{flex:1;padding:7px 11px;background:var(--s2);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none;}
+.cinput input:focus{border-color:var(--accent);}
+.cinput input::placeholder{color:var(--muted);}
+.cinput button{padding:7px 12px;background:var(--s2);border:1.5px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;transition:all .12s;white-space:nowrap;}
+.cinput button:hover{border-color:var(--accent);color:var(--text);}
+.mbox{border-radius:10px;padding:11px 13px;font-size:12px;line-height:1.6;border:1.5px solid var(--border);background:var(--s2);color:var(--muted);margin-bottom:16px;}
+.mbox.ok{border-color:rgba(52,211,153,.4);color:var(--ok);}
+.mbox.no{border-color:rgba(248,113,113,.3);color:var(--warn);}
+.mc{background:rgba(52,211,153,.13);color:var(--ok);padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;font-family:monospace;}
+.qty-row{display:flex;align-items:center;justify-content:space-between;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px;}
+.qty-lbl{font-size:13px;color:var(--muted);font-weight:500;}
+.qc{display:flex;align-items:center;}
+.qbtn{width:30px;height:30px;border:1.5px solid var(--border);background:var(--s1);color:var(--text);font-size:17px;cursor:pointer;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:background .1s;}
+.qbtn:hover{background:var(--border);}
+.qnum{width:42px;text-align:center;font-size:17px;font-weight:700;background:none;border:none;color:var(--text);outline:none;font-family:inherit;}
+.abtn{width:100%;padding:13px;background:var(--accent);border:none;border-radius:var(--r);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .13s;}
+.abtn:hover{background:#6a5ee0;transform:translateY(-1px);}
+.rhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+.rhead-l{display:flex;align-items:center;gap:8px;}
+.rhead-l h2{font-size:15px;font-weight:700;}
+.badge{background:rgba(124,111,253,.2);color:var(--accent2);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.rbtns{display:flex;gap:6px;flex-wrap:wrap;}
+.rbtn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.rbtn-ghost{background:none;border:1.5px solid var(--border);color:var(--muted);}
+.rbtn-ghost:hover{border-color:var(--accent2);color:var(--text);}
+.rbtn-green{background:rgba(52,211,153,.1);border:1.5px solid rgba(52,211,153,.3);color:var(--ok);}
+.rbtn-green:hover{background:rgba(52,211,153,.2);}
+.rbtn-red{background:none;border:1.5px solid rgba(248,113,113,.2);color:var(--warn);}
+.rbtn-red:hover{background:rgba(248,113,113,.08);}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty-ico{font-size:32px;margin-bottom:10px;opacity:.3;}
+.empty p{font-size:13px;line-height:2;}
+.items{display:flex;flex-direction:column;gap:7px;}
+.card{background:var(--s1);border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px;display:grid;grid-template-columns:28px 1fr auto 30px;align-items:center;gap:12px;animation:fu .18s ease;}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.card:hover{border-color:rgba(124,111,253,.5);}
+.cnum{width:28px;height:28px;background:var(--s2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);font-weight:700;flex-shrink:0;}
+.cname{font-size:14px;font-weight:600;margin-bottom:5px;}
+.ctags{display:flex;flex-wrap:wrap;gap:4px;}
+.tag{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700;}
+.tcode{background:rgba(124,111,253,.15);color:var(--accent2);font-family:monospace;}
+.tbar{background:rgba(52,211,153,.1);color:var(--ok);font-family:monospace;}
+.topt{background:var(--s2);color:#888;}
+.tnone{background:rgba(248,113,113,.1);color:var(--warn);}
+.cqty{font-size:20px;font-weight:700;text-align:right;white-space:nowrap;}
+.cqty span{font-size:10px;color:var(--muted);font-weight:400;}
+.cdel{width:30px;height:30px;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .12s;}
+.cdel:hover{background:rgba(248,113,113,.15);color:var(--warn);}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--s2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:all .2s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}.panel{border-right:none;border-bottom:1px solid var(--border);}}
+</style>
+</head>
+<body>
+<div class="hd">
+  <div class="hd-icon">&#128230;</div>
+  <div><div class="hd-title">패킹리스트 / 装箱单</div><div class="hd-sub">그로잉업 · 출고 작업용</div></div>
+  <div class="hd-date">
+    <label class="date-lbl">선적일 / 装运日期</label>
+    <div class="date-row">
+      <div class="cal-wrap" onclick="document.getElementById('ship-date').showPicker()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <input type="date" id="ship-date" class="date-input-hidden">
+        <span id="ship-date-display" class="date-display">날짜 선택</span>
+      </div>
+      <input type="text" id="ship-date-text" class="date-input-text" placeholder="직접 입력">
+    </div>
+  </div>
+</div>
+<div class="layout">
+  <div class="panel">
+    <div class="ptitle">제품 선택</div>
+    <div id="pgrid"></div>
+  </div>
+  <div class="panel">
+    <div class="ptitle">옵션 선택</div>
+    <div id="opt"><div class="opt-empty"><span style="font-size:28px;opacity:.3">&#128072;</span><br>왼쪽에서 제품을 선택하세요</div></div>
+  </div>
+  <div class="panel">
+    <div class="rhead">
+      <div class="rhead-l"><h2>패킹리스트</h2><span class="badge" id="badge">0건</span></div>
+      <div class="rbtns">
+        <button class="rbtn rbtn-ghost" onclick="expCSV()">CSV</button>
+        <button class="rbtn rbtn-green" onclick="expXlsx()">엑셀 저장</button>
+        <button class="rbtn rbtn-red" onclick="clearAll()">전체 삭제</button>
+      </div>
+    </div>
+    <div id="list"><div class="empty"><div class="empty-ico">&#x1F4CB;</div><p>제품을 선택하고<br>추가해보세요</p></div></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var DB=[{code:"S13130",name:"new 스마트 캐리어",option:"그린-20인치",barcode:"R54S01GR20"},{code:"S13131",name:"new 스마트 캐리어",option:"그린-26인치",barcode:"R54S01GR26"},{code:"S13128",name:"new 스마트 캐리어",option:"아이보리-20인치",barcode:"R54S01IV20"},{code:"S13129",name:"new 스마트 캐리어",option:"아이보리-26인치",barcode:"R54S01IV26"},{code:"S00300",name:"바퀴커버",option:"그레이",barcode:"R3S94GY0"},{code:"S00301",name:"바퀴커버",option:"블랙",barcode:"R3S94BK0"},{code:"S00302",name:"바퀴커버",option:"블루",barcode:"R3S94BL0"},{code:"S00299",name:"바퀴커버",option:"옐로우",barcode:"R3S94OR0"},{code:"S00304",name:"바퀴커버",option:"퍼플",barcode:"R3S94PU0"},{code:"S00303",name:"바퀴커버",option:"핑크",barcode:"R3S94PK0"},{code:"S13209",name:"러닝 손목밴드",option:"그레이",barcode:"T26AA01WB600GY"},{code:"S13208",name:"러닝 손목밴드",option:"블랙",barcode:"T26AA01WB600BK"},{code:"S13163",name:"러닝 장갑",option:"M",barcode:"T25WT01UB500BK00M"},{code:"S13164",name:"러닝 장갑",option:"L",barcode:"T25WT01UB500BK00L"},{code:"S13206",name:"러닝 헤어밴드",option:"그레이",barcode:"T26AH01WB600GY"},{code:"S13205",name:"러닝 헤어밴드",option:"블랙",barcode:"T26AH01WB600BK"},{code:"S13203",name:"러닝조끼",option:"그레이",barcode:"T26AV01UB600GY"},{code:"S13202",name:"러닝조끼",option:"블랙",barcode:"T26AV01UB600BK"},{code:"S13253",name:"러닝조끼 지퍼형",option:"블랙S",barcode:"T26AV02UB600BKS"},{code:"S13254",name:"러닝조끼 지퍼형",option:"블랙M",barcode:"T26AV02UB600BKM"},{code:"S13255",name:"러닝조끼 지퍼형",option:"블랙L",barcode:"T26AV02UB600BKL"},{code:"S13217",name:"모노폴 캐리어",option:"스페이스그레이-20인치",barcode:"R26AC01UB600GY020"},{code:"S13218",name:"모노폴 캐리어",option:"스페이스그레이-24인치",barcode:"R26AC01UB600GY024"},{code:"S13219",name:"모노폴 캐리어",option:"스페이스그레이-28인치",barcode:"R26AC01UB600GY028"},{code:"S13211",name:"모노폴 캐리어",option:"밀크베이지-20인치",barcode:"R26AC01UB600BE020"},{code:"S13212",name:"모노폴 캐리어",option:"밀크베이지-24인치",barcode:"R26AC01UB600BE024"},{code:"S13213",name:"모노폴 캐리어",option:"밀크베이지-28인치",barcode:"R26AC01UB600BE028"},{code:"S13220",name:"모노폴 캐리어",option:"클래식블랙-20인치",barcode:"R26AC01UB600BK020"},{code:"S13221",name:"모노폴 캐리어",option:"클래식블랙-24인치",barcode:"R26AC01UB600BK024"},{code:"S13222",name:"모노폴 캐리어",option:"클래식블랙-28인치",barcode:"R26AC01UB600BK028"},{code:"S13214",name:"모노폴 캐리어",option:"아이리스블루-20인치",barcode:"R26AC01UB600BL020"},{code:"S13215",name:"모노폴 캐리어",option:"아이리스블루-24인치",barcode:"R26AC01UB600BL024"},{code:"S13216",name:"모노폴 캐리어",option:"아이리스블루-28인치",barcode:"R26AC01UB600BL028"},{code:"S13230",name:"모먼트 캐리어",option:"그레이-20인치",barcode:"R26AC02UB600GY020"},{code:"S13231",name:"모먼트 캐리어",option:"그레이-24인치",barcode:"R26AC02UB600GY024"},{code:"S13232",name:"모먼트 캐리어",option:"그레이-28인치",barcode:"R26AC02UB600GY028"},{code:"S13224",name:"모먼트 캐리어",option:"베이지-20인치",barcode:"R26AC02UB600BE020"},{code:"S13225",name:"모먼트 캐리어",option:"베이지-24인치",barcode:"R26AC02UB600BE024"},{code:"S13226",name:"모먼트 캐리어",option:"베이지-28인치",barcode:"R26AC02UB600BE028"},{code:"S13233",name:"모먼트 캐리어",option:"블랙-20인치",barcode:"R26AC02UB600BK020"},{code:"S13234",name:"모먼트 캐리어",option:"블랙-24인치",barcode:"R26AC02UB600BK024"},{code:"S13235",name:"모먼트 캐리어",option:"블랙-28인치",barcode:"R26AC02UB600BK028"},{code:"S13227",name:"모먼트 캐리어",option:"블루-20인치",barcode:"R26AC02UB600BL020"},{code:"S13228",name:"모먼트 캐리어",option:"블루-24인치",barcode:"R26AC02UB600BL024"},{code:"S13229",name:"모먼트 캐리어",option:"블루-28인치",barcode:"R26AC02UB600BL028"},{code:"S12899",name:"스파클링 캐리어",option:"그레이-20인치",barcode:"R5S03GY20"},{code:"S12898",name:"스파클링 캐리어",option:"밀크화이트-20인치",barcode:"R5S03OW20"},{code:"S12991",name:"스파클링 캐리어",option:"밀크화이트-24인치",barcode:"R5S03OW24"},{code:"S12992",name:"스파클링 캐리어",option:"밀크화이트-26인치",barcode:"R5S03OW26"},{code:"S12897",name:"스파클링 캐리어",option:"아쿠아그린-20인치",barcode:"R5S03GN20"},{code:"S12989",name:"스파클링 캐리어",option:"아쿠아그린-24인치",barcode:"R5S03GN24"},{code:"S12990",name:"스파클링 캐리어",option:"아쿠아그린-26인치",barcode:"R5S03GN26"},{code:"S12900",name:"스파클링 캐리어",option:"크리스탈블랙-20인치",barcode:"R5S03BK20"},{code:"S13236",name:"스파클링 캐리어",option:"크리스탈블랙-24인치",barcode:"R5S03BK24"},{code:"S00259",name:"오프너 컵홀더 캐리어",option:"다크그린-20인치",barcode:"R3S14CDG20"},{code:"S00292",name:"오프너 컵홀더 캐리어",option:"다크그린-22인치",barcode:"R3S14CDG22"},{code:"S00293",name:"오프너 컵홀더 캐리어",option:"다크그린-24인치",barcode:"R3S14CDG24"},{code:"S00294",name:"오프너 컵홀더 캐리어",option:"다크그린-26인치",barcode:"R3S14CDG26"},{code:"S00260",name:"오프너 컵홀더 캐리어",option:"레드-20인치",barcode:"R3S14CRE20"},{code:"S00286",name:"오프너 컵홀더 캐리어",option:"레드-22인치",barcode:"R3S14CRE22"},{code:"S00287",name:"오프너 컵홀더 캐리어",option:"레드-24인치",barcode:"R3S14CRE24"},{code:"S00288",name:"오프너 컵홀더 캐리어",option:"레드-26인치",barcode:"R3S14CRE26"},{code:"S00256",name:"오프너 컵홀더 캐리어",option:"블랙-20인치",barcode:"R3S14CBK20"},{code:"S00295",name:"오프너 컵홀더 캐리어",option:"블랙-22인치",barcode:"R3S14CBK22"},{code:"S00296",name:"오프너 컵홀더 캐리어",option:"블랙-24인치",barcode:"R3S14CBK24"},{code:"S00297",name:"오프너 컵홀더 캐리어",option:"블랙-26인치",barcode:"R3S14CBK26"},{code:"S00258",name:"오프너 컵홀더 캐리어",option:"실버-20인치",barcode:"R3S14CSV20"},{code:"S00289",name:"오프너 컵홀더 캐리어",option:"실버-22인치",barcode:"R3S14CSV22"},{code:"S00290",name:"오프너 컵홀더 캐리어",option:"실버-24인치",barcode:"R3S14CSV24"},{code:"S00291",name:"오프너 컵홀더 캐리어",option:"실버-26인치",barcode:"R3S14CSV26"},{code:"S00257",name:"오프너 컵홀더 캐리어",option:"아이보리-20인치",barcode:"R3S14CIV20"},{code:"S00283",name:"오프너 컵홀더 캐리어",option:"아이보리-22인치",barcode:"R3S14CIV22"},{code:"S00284",name:"오프너 컵홀더 캐리어",option:"아이보리-24인치",barcode:"R3S14CIV24"},{code:"S00285",name:"오프너 컵홀더 캐리어",option:"아이보리-26인치",barcode:"R3S14CIV26"},{code:"S00261",name:"오프너 확장형 캐리어",option:"블랙-20인치",barcode:"R3S15EBK20"},{code:"S00262",name:"오프너 확장형 캐리어",option:"아이보리-20인치",barcode:"R3S15EIV20"},{code:"S00049",name:"오프너 스탠다드 캐리어",option:"블랙-18인치",barcode:"R3S02BK18"},{code:"S00050",name:"오프너 스탠다드 캐리어",option:"블랙-20인치",barcode:"R3S02BK20"},{code:"S00037",name:"오프너 스탠다드 캐리어",option:"아이보리-18인치",barcode:"R3S02IV18"},{code:"S00038",name:"오프너 스탠다드 캐리어",option:"아이보리-20인치",barcode:"R3S02IV20"},{code:"S12912",name:"인딥 캐리어",option:"그린-20인치",barcode:"R5S04GN20"},{code:"S13239",name:"인딥 캐리어",option:"라이트옐로우-20인치",barcode:"R5S04YE20"},{code:"S13240",name:"인딥 캐리어",option:"라이트옐로우-24인치",barcode:"R5S04YE24"},{code:"S12908",name:"인딥 캐리어",option:"블랙-20인치",barcode:"R5S04BK20"},{code:"S12911",name:"인딥 캐리어",option:"아이리스블루-20인치",barcode:"R5S04BL20"},{code:"S12994",name:"인딥 캐리어",option:"아이리스블루-24인치",barcode:"R5S04BL24"},{code:"S12910",name:"인딥 캐리어",option:"어반그레이-20인치",barcode:"R5S04GY20"},{code:"S12993",name:"인딥 캐리어",option:"어반그레이-24인치",barcode:"R5S04GY24"},{code:"S12907",name:"인딥 캐리어",option:"화이트-20인치",barcode:"R5S04OW20"},{code:"S13241",name:"큐보이드 캐리어",option:"건메탈-20인치",barcode:"R3S03GY20"},{code:"S12686",name:"큐보이드 캐리어",option:"건메탈-28인치",barcode:"R3S03GY28"},{code:"S12687",name:"큐보이드 캐리어",option:"건메탈-32인치",barcode:"R3S03GY32"},{code:"S12688",name:"큐보이드 캐리어",option:"건메탈-36인치",barcode:"R3S03GY36"},{code:"S13242",name:"큐보이드 캐리어",option:"그린-20인치",barcode:"R3S03GR20"},{code:"S00093",name:"큐보이드 캐리어",option:"그린-28인치",barcode:"R3S03GR28"},{code:"S00094",name:"큐보이드 캐리어",option:"그린-32인치",barcode:"R3S03GR32"},{code:"S00095",name:"큐보이드 캐리어",option:"그린-36인치",barcode:"R3S03GR36"},{code:"S13243",name:"큐보이드 캐리어",option:"라벤더퍼플-20인치",barcode:"R3S03PU20"},{code:"S11793",name:"큐보이드 캐리어",option:"라벤더퍼플-28인치",barcode:"R3S03PU28"},{code:"S11794",name:"큐보이드 캐리어",option:"라벤더퍼플-32인치",barcode:"R3S03PU32"},{code:"S11795",name:"큐보이드 캐리어",option:"라벤더퍼플-36인치",barcode:"R3S03PU36"},{code:"S13244",name:"큐보이드 캐리어",option:"블랙-20인치",barcode:"R3S03BK20"},{code:"S00096",name:"큐보이드 캐리어",option:"블랙-28인치",barcode:"R3S03BK28"},{code:"S00097",name:"큐보이드 캐리어",option:"블랙-32인치",barcode:"R3S03BK32"},{code:"S00098",name:"큐보이드 캐리어",option:"블랙-36인치",barcode:"R3S03BK36"},{code:"S13245",name:"큐보이드 캐리어",option:"블루앤화이트-20인치",barcode:"R3S03BW20"},{code:"S00099",name:"큐보이드 캐리어",option:"블루앤화이트-28인치",barcode:"R3S03BW28"},{code:"S00100",name:"큐보이드 캐리어",option:"블루앤화이트-32인치",barcode:"R3S03BW32"},{code:"S00101",name:"큐보이드 캐리어",option:"블루앤화이트-36인치",barcode:"R3S03BW36"},{code:"S13246",name:"큐보이드 캐리어",option:"스카이블루-20인치",barcode:"R3S03SK20"},{code:"S00090",name:"큐보이드 캐리어",option:"스카이블루-28인치",barcode:"R3S03SK28"},{code:"S00091",name:"큐보이드 캐리어",option:"스카이블루-32인치",barcode:"R3S03SK32"},{code:"S00092",name:"큐보이드 캐리어",option:"스카이블루-36인치",barcode:"R3S03SK36"},{code:"S13247",name:"큐보이드 캐리어",option:"핑크-20인치",barcode:"R3S03PK20"},{code:"S00087",name:"큐보이드 캐리어",option:"핑크-28인치",barcode:"R3S03PK28"},{code:"S00088",name:"큐보이드 캐리어",option:"핑크-32인치",barcode:"R3S03PK32"},{code:"S00089",name:"큐보이드 캐리어",option:"핑크-36인치",barcode:"R3S03PK36"},{code:"S13248",name:"큐보이드 캐리어",option:"화이트-20인치",barcode:"R3S03WH20"},{code:"S00084",name:"큐보이드 캐리어",option:"화이트-28인치",barcode:"R3S03WH28"},{code:"S00085",name:"큐보이드 캐리어",option:"화이트-32인치",barcode:"R3S03WH32"},{code:"S00086",name:"큐보이드 캐리어",option:"화이트-36인치",barcode:"R3S03WH36"},{code:"S13167",name:"플라이더 캐리어",option:"블루-20인치",barcode:"R25AC01UB500BL020"},{code:"S13166",name:"플라이더 캐리어",option:"핑크-20인치",barcode:"R25AC01UB500PK020"},{code:"S00217",name:"네임택 럭키코인",option:"블랙",barcode:"R3S96BKLC"},{code:"S00216",name:"네임택 럭키코인",option:"블루",barcode:"R3S96BLLC"},{code:"S00215",name:"네임택 럭키코인",option:"핑크",barcode:"R3S96PKLC"},{code:"S00219",name:"네임택 리틀백",option:"블루",barcode:"R3S96BLLB"},{code:"S00218",name:"네임택 리틀백",option:"핑크",barcode:"R3S96PKLB"},{code:"S00214",name:"네임택 마이백",option:"블랙",barcode:"R3S96BKMB"},{code:"S00213",name:"네임택 마이백",option:"블루",barcode:"R3S96BLMB"},{code:"S00212",name:"네임택 마이백",option:"핑크",barcode:"R3S96PKMB"},{code:"S00205",name:"네임택 바나나",option:"기본",barcode:"R3S96YEBT"},{code:"S00206",name:"네임택 상큼딸기",option:"기본",barcode:"R3S96RERS"},{code:"S00207",name:"네임택 스낵버거",option:"기본",barcode:"R3S96YESB"},{code:"S00210",name:"네임택 스윗아이스",option:"기본",barcode:"R3S96BESW"},{code:"S00221",name:"네임택 잇츠마인",option:"블루",barcode:"R3S96BLIM"},{code:"S00220",name:"네임택 잇츠마인",option:"핑크",barcode:"R3S96PKIM"},{code:"S00208",name:"네임택 핑크도넛",option:"기본",barcode:"R3S96PKPD"},{code:"S00209",name:"네임택 하트캔디",option:"기본",barcode:"R3S96PKHC"},{code:"S00211",name:"네임택 해피아보카도",option:"기본",barcode:"R3S96GRHA"},{code:"S00222",name:"네임택 헬로판다",option:"기본",barcode:"R3S96WHHP"},{code:"S13010",name:"백백 롤링프레스",option:"에어펌프형-블랙",barcode:"R53B005BK"},{code:"S13011",name:"백백 롤링프레스",option:"원터치압축형-블랙",barcode:"R53B006BK"},{code:"S00134",name:"리츠레디백",option:"그린",barcode:"R3S04GR14"},{code:"S00135",name:"리츠레디백",option:"레드",barcode:"R3S04RE14"},{code:"S00136",name:"리츠레디백",option:"로즈골드",barcode:"R3S04RG14"},{code:"S00133",name:"리츠레디백",option:"민트",barcode:"R3S04MT14"},{code:"S00138",name:"리츠레디백",option:"블랙",barcode:"R3S04BK14"},{code:"S00137",name:"리츠레디백",option:"실버그레이",barcode:"R3S04SV14"},{code:"S00131",name:"리츠레디백",option:"화이트",barcode:"R3S04IV14"},{code:"S00132",name:"리츠레디백",option:"인디핑크",barcode:"R3S04IP14"}];
+var PRODUCTS=[{id:"c1",g:"캐리어 (行李箱)",label:"NEW 스마트 (新智能)",dbName:"new 스마트 캐리어",colors:["그린","아이보리"],sizes:["20인치","26인치"]},{id:"c2",g:"캐리어 (行李箱)",label:"모노풀 (单杆)",dbName:"모노폴 캐리어",colors:["스페이스그레이","밀크베이지","클래식블랙","아이리스블루"],sizes:["20인치","24인치","28인치"]},{id:"c3",g:"캐리어 (行李箱)",label:"모먼트 (时光)",dbName:"모먼트 캐리어",colors:["그레이","베이지","블랙","블루"],sizes:["20인치","24인치","28인치"]},{id:"c4",g:"캐리어 (行李箱)",label:"스파클링 (闪耀)",dbName:"스파클링 캐리어",colors:["그레이","밀크화이트","아쿠아그린","크리스탈블랙"],sizes:["20인치","24인치","26인치"]},{id:"c5",g:"캐리어 (行李箱)",label:"오프너 컵홀더 (开瓶器杯架)",dbName:"오프너 컵홀더 캐리어",colors:["다크그린","레드","블랙","실버","아이보리"],sizes:["20인치","22인치","24인치","26인치"]},{id:"c6",g:"캐리어 (行李箱)",label:"오프너 스탠다드 (开瓶器标准)",dbName:"오프너 스탠다드 캐리어",colors:["블랙","아이보리"],sizes:["18인치","20인치"]},{id:"c7",g:"캐리어 (行李箱)",label:"오프너 확장형 (开瓶器扩展)",dbName:"오프너 확장형 캐리어",colors:["블랙","아이보리"],sizes:["20인치"]},{id:"c8",g:"캐리어 (行李箱)",label:"인딥 (深度)",dbName:"인딥 캐리어",colors:["그린","라이트옐로우","블랙","아이리스블루","어반그레이","화이트"],sizes:["20인치","24인치"]},{id:"c9",g:"캐리어 (行李箱)",label:"큐보이드 (方形)",dbName:"큐보이드 캐리어",colors:["건메탈","그린","라벤더퍼플","블랙","블루앤화이트","스카이블루","핑크","화이트"],sizes:["20인치","28인치","32인치","36인치"]},{id:"c10",g:"캐리어 (行李箱)",label:"플라이더 (飞翔)",dbName:"플라이더 캐리어",colors:["블루","핑크"],sizes:["20인치"]},{id:"r1",g:"러닝상품 (运动用品)",label:"장갑 (手套)",dbName:"러닝 장갑",colors:["블랙"],sizes:["M","L"]},{id:"r2",g:"러닝상품 (运动用品)",label:"손목밴드 (腕带)",dbName:"러닝 손목밴드",colors:["그레이","블랙"],sizes:["FREE"]},{id:"r3",g:"러닝상품 (运动用品)",label:"헤어밴드 (发带)",dbName:"러닝 헤어밴드",colors:["그레이","블랙"],sizes:["FREE"]},{id:"r4",g:"러닝상품 (运动用品)",label:"조끼 (背心)",dbName:"러닝조끼",colors:["그레이","블랙"],sizes:["FREE"]},{id:"r5",g:"러닝상품 (运动用品)",label:"조끼 지퍼형 (拉链背心)",dbName:"러닝조끼 지퍼형",colors:["블랙"],sizes:["S","M","L"]},{id:"n1",g:"네임택 (行李牌)",label:"럭키코인 (幸运币)",dbName:"네임택 럭키코인",colors:["블랙","블루","핑크"],sizes:["FREE"]},{id:"n2",g:"네임택 (行李牌)",label:"리틀백 (小包)",dbName:"네임택 리틀백",colors:["블루","핑크"],sizes:["FREE"]},{id:"n3",g:"네임택 (行李牌)",label:"마이백 (我的包)",dbName:"네임택 마이백",colors:["블랙","블루","핑크"],sizes:["FREE"]},{id:"n4",g:"네임택 (行李牌)",label:"바나나 (香蕉)",dbName:"네임택 바나나",colors:["기본"],sizes:["FREE"]},{id:"n5",g:"네임택 (行李牌)",label:"상큼딸기 (草莓)",dbName:"네임택 상큼딸기",colors:["기본"],sizes:["FREE"]},{id:"n6",g:"네임택 (行李牌)",label:"스낵버거 (汉堡)",dbName:"네임택 스낵버거",colors:["기본"],sizes:["FREE"]},{id:"n7",g:"네임택 (行李牌)",label:"스윗아이스 (甜冰)",dbName:"네임택 스윗아이스",colors:["기본"],sizes:["FREE"]},{id:"n8",g:"네임택 (行李牌)",label:"잇츠마인 (这是我的)",dbName:"네임택 잇츠마인",colors:["블루","핑크"],sizes:["FREE"]},{id:"n9",g:"네임택 (行李牌)",label:"핑크도넛 (甜甜圈)",dbName:"네임택 핑크도넛",colors:["기본"],sizes:["FREE"]},{id:"n10",g:"네임택 (行李牌)",label:"하트캔디 (心形糖)",dbName:"네임택 하트캔디",colors:["기본"],sizes:["FREE"]},{id:"n11",g:"네임택 (行李牌)",label:"해피아보카도 (快乐牛油果)",dbName:"네임택 해피아보카도",colors:["기본"],sizes:["FREE"]},{id:"n12",g:"네임택 (行李牌)",label:"헬로판다 (熊猫)",dbName:"네임택 헬로판다",colors:["기본"],sizes:["FREE"]},{id:"b1",g:"백백 (背包)",label:"롤링프레스 (滚压)",dbName:"백백 롤링프레스",colors:["블랙"],sizes:["에어펌프형","원터치압축형"]},{id:"e1",g:"기타 (其他)",label:"바퀴커버 (轮子套)",dbName:"바퀴커버",colors:["그레이","블랙","블루","옐로우","퍼플","핑크"],sizes:["FREE"]},{id:"e2",g:"기타 (其他)",label:"김똑똑 (金聪明)",dbName:"김똑똑",colors:["기본"],sizes:["FREE"]},{id:"e3",g:"기타 (其他)",label:"똑똑떡뻥 (聪明米饼)",dbName:"똑똑떡뻥",colors:["기본"],sizes:["1봉","3봉","4봉","7봉","50봉"]},{id:"e4",g:"기타 (其他)",label:"리츠 레디백 (行李背包)",dbName:"리츠레디백",colors:["그린","레드","로즈골드","민트","블랙","실버그레이","화이트","인디핑크"],sizes:["FREE"]}];
+var GROUPS=["캐리어 (行李箱)","러닝상품 (运动用品)","네임택 (行李牌)","백백 (背包)","기타 (其他)"];
+var CMAP={그레이:"#9ca3af",블루:"#3b82f6",블랙:"#374151",옐로우:"#fbbf24",퍼플:"#a855f7",핑크:"#f472b6",화이트:"#e5e7eb",아이보리:"#fef3c7",건메탈:"#6b7280",그린:"#34d399",라벤더퍼플:"#c084fc",스카이블루:"#7dd3fc",블루앤화이트:"#93c5fd",스페이스그레이:"#6b7280",밀크베이지:"#d6cfc4",클래식블랙:"#1f2937",아이리스블루:"#818cf8",베이지:"#d6cfc4",아쿠아그린:"#6ee7b7",크리스탈블랙:"#111827",밀크화이트:"#f3f4f6",다크그린:"#065f46",레드:"#ef4444",실버:"#d1d5db",라이트옐로우:"#fde68a",어반그레이:"#9ca3af",로즈골드:"#fda4af",민트:"#6ee7b7",실버그레이:"#d1d5db",인디핑크:"#fb7185",기본:"#7c6ffd"};
+var cur=null,sc="",ss="",exC=[],exS=[],items=[],uid=0;
+document.addEventListener("DOMContentLoaded", function(){
+  var dp = document.getElementById("ship-date");
+  if(dp) dp.addEventListener("change", function(){
+    var v = this.value;
+    if(v){
+      var parts = v.split("-");
+      document.getElementById("ship-date-display").textContent = parts[0]+"년 "+parts[1]+"월 "+parts[2]+"일";
+      document.getElementById("ship-date-display").style.color = "var(--text)";
+    } else {
+      document.getElementById("ship-date-display").textContent = "날짜 선택";
+    }
+  });
+});
+function init(){
+  var el=document.getElementById("pgrid");
+  el.innerHTML="";
+  GROUPS.forEach(function(g){
+    var ps=PRODUCTS.filter(function(p){return p.g===g;});
+    if(!ps.length)return;
+    var gb=document.createElement("div"); gb.className="group-block";
+    var gn=document.createElement("div"); gn.className="group-name"; gn.textContent=g; gb.appendChild(gn);
+    var pl=document.createElement("div"); pl.className="prod-list";
+    ps.forEach(function(p){
+      var b=document.createElement("button"); b.type="button"; b.className="pbtn"; b.id="pb_"+p.id; b.textContent=p.label;
+      (function(pid){b.addEventListener("click",function(){onProd(pid);});})(p.id);
+      pl.appendChild(b);
+    });
+    gb.appendChild(pl); el.appendChild(gb);
+  });
+}
+function onProd(id){
+  if(cur&&cur.id===id){cur=null;sc="";ss="";document.querySelectorAll(".pbtn").forEach(function(b){b.classList.remove("on");});document.getElementById("opt").innerHTML='<div class="opt-empty"><span style="font-size:28px;opacity:.3">&#128072;</span><br>왼쪽에서 제품을 선택하세요</div>';return;}
+  cur=PRODUCTS.find(function(p){return p.id===id;}); sc=""; ss=""; exC=[]; exS=[];
+  document.querySelectorAll(".pbtn").forEach(function(b){b.classList.remove("on");});
+  document.getElementById("pb_"+id).classList.add("on");
+  if(cur.colors.length===1)sc=cur.colors[0];
+  if(cur.sizes.length===1)ss=cur.sizes[0];
+  buildOpt();
+}
+function buildOpt(){
+  var el=document.getElementById("opt"); el.innerHTML="";
+  var nm=document.createElement("div"); nm.className="sel-name"; nm.textContent=cur.label; el.appendChild(nm);
+  var gp=document.createElement("div"); gp.className="sel-group"; gp.textContent=cur.g; el.appendChild(gp);
+  function makeSection(labelTxt, chipsId, inputId, addType){
+    var sec=document.createElement("div"); sec.className="opt-section";
+    var lbl=document.createElement("div"); lbl.className="opt-label"; lbl.textContent=labelTxt; sec.appendChild(lbl);
+    var chips=document.createElement("div"); chips.className="chips"; chips.id=chipsId; sec.appendChild(chips);
+    var ci=document.createElement("div"); ci.className="cinput";
+    var inp=document.createElement("input"); inp.type="text"; inp.id=inputId; inp.placeholder=labelTxt+" 직접 입력";
+    var btn=document.createElement("button"); btn.type="button"; btn.textContent="+ 추가";
+    btn.addEventListener("click",function(){addEx(addType);});
+    ci.appendChild(inp); ci.appendChild(btn); sec.appendChild(ci);
+    return sec;
+  }
+  el.appendChild(makeSection("색상","cc","ci-c","color"));
+  el.appendChild(makeSection("사이즈","cs","ci-s","size"));
+  var mb=document.createElement("div"); mb.className="mbox"; mb.id="mbox"; mb.textContent="색상과 사이즈를 선택하면 상품코드를 찾아드려요"; el.appendChild(mb);
+  var qs=document.createElement("div"); qs.className="opt-section";
+  var ql=document.createElement("div"); ql.className="opt-label"; ql.textContent="수량"; qs.appendChild(ql);
+  var qr=document.createElement("div"); qr.className="qty-row";
+  var qlb=document.createElement("span"); qlb.className="qty-lbl"; qlb.textContent="수량"; qr.appendChild(qlb);
+  var qc=document.createElement("div"); qc.className="qc";
+  var qm=document.createElement("button"); qm.type="button"; qm.className="qbtn"; qm.textContent="-";
+  qm.addEventListener("click",function(){chgQ(-1);});
+  var qn=document.createElement("input"); qn.type="number"; qn.className="qnum"; qn.id="qty"; qn.value="1"; qn.min="1";
+  var qp=document.createElement("button"); qp.type="button"; qp.className="qbtn"; qp.textContent="+";
+  qp.addEventListener("click",function(){chgQ(1);});
+  qc.appendChild(qm); qc.appendChild(qn); qc.appendChild(qp); qr.appendChild(qc); qs.appendChild(qr); el.appendChild(qs);
+  var ab=document.createElement("button"); ab.type="button"; ab.className="abtn"; ab.textContent="리스트에 추가 →";
+  ab.addEventListener("click",function(){addItem();}); el.appendChild(ab);
+  renderCC(); renderCS(); renderMatch();
+}
+function renderCC(){
+  var w=document.getElementById("cc"); if(!w)return; w.innerHTML="";
+  cur.colors.concat(exC).forEach(function(c){
+    var b=document.createElement("button"); b.type="button"; b.className="chip"+(sc===c?" on":"");
+    var d=document.createElement("span"); d.className="dot"; d.style.background=CMAP[c]||"#888"; b.appendChild(d); b.appendChild(document.createTextNode(c));
+    (function(cv){b.addEventListener("click",function(){sc=(sc===cv)?"":cv;renderCC();renderMatch();});})(c);
+    w.appendChild(b);
+  });
+}
+function renderCS(){
+  var w=document.getElementById("cs"); if(!w)return; w.innerHTML="";
+  cur.sizes.concat(exS).forEach(function(s){
+    var b=document.createElement("button"); b.type="button"; b.className="chip"+(ss===s?" on":""); b.textContent=s;
+    (function(sv){b.addEventListener("click",function(){ss=(ss===sv)?"":sv;renderCS();renderMatch();});})(s);
+    w.appendChild(b);
+  });
+}
+function addEx(t){
+  if(!cur)return;
+  var inp=document.getElementById(t==="color"?"ci-c":"ci-s");
+  var v=inp.value.trim(); if(!v)return;
+  if(t==="color"){if(exC.indexOf(v)<0)exC.push(v);sc=v;renderCC();}
+  else{if(exS.indexOf(v)<0)exS.push(v);ss=v;renderCS();}
+  inp.value=""; renderMatch();
+}
+function nrm(s){return(s||"").replace(/[\s\-_&]/g,"").toLowerCase();}
+function findM(){
+  if(!cur)return[];
+  return DB.filter(function(row){
+    var nm=nrm(row.name),opt=nrm(row.option);
+    var nok=nrm(cur.dbName).split(" ").every(function(k){return nm.indexOf(k)>=0;});
+    var cok=!sc||sc==="기본"||opt.indexOf(nrm(sc))>=0;
+    var sok=!ss||ss==="FREE"||opt.indexOf(nrm(ss))>=0;
+    return nok&&cok&&sok;
+  });
+}
+function renderMatch(){
+  var box=document.getElementById("mbox"); if(!box)return;
+  if(!sc&&!ss){box.className="mbox";box.textContent="색상과 사이즈를 선택하면 상품코드를 찾아드려요";return;}
+  var m=findM();
+  if(m.length===0){box.className="mbox no";box.textContent="일치하는 상품 없음";}
+  else if(m.length===1){box.className="mbox ok";box.innerHTML='✓ <span class="mc">'+m[0].code+'</span>&nbsp;&nbsp;'+m[0].name+' '+m[0].option+'&nbsp;&nbsp;<span class="mc">'+m[0].barcode+'</span>';}
+  else{box.className="mbox ok";box.innerHTML='✓ '+m.length+'개 일치 &nbsp;'+m.slice(0,2).map(function(x){return'<span class="mc">'+x.code+'</span>';}).join(" ")+(m.length>2?" …":"");}
+}
+function chgQ(d){var i=document.getElementById("qty");if(i)i.value=Math.max(1,(parseInt(i.value)||1)+d);}
+function addItem(){
+  if(!cur){showToast("제품을 선택해주세요");return;}
+  if(!sc){showToast("색상을 선택해주세요");return;}
+  if(!ss){showToast("사이즈를 선택해주세요");return;}
+  var q=parseInt((document.getElementById("qty")||{value:1}).value)||1;
+  var m=findM();
+  items.push({id:++uid,label:cur.label,group:cur.g,color:sc,size:ss,qty:q,code:m[0]?m[0].code:"",barcode:m[0]?m[0].barcode:""});
+  renderList(); showToast("추가했습니다 ✓");
+}
+function renderList(){
+  document.getElementById("badge").textContent=items.length+"건";
+  var el=document.getElementById("list");
+  if(!items.length){el.innerHTML='<div class="empty"><div class="empty-ico">&#x1F4CB;</div><p>제품을 선택하고<br>추가해보세요</p></div>';return;}
+  var h='<div class="items">';
+  items.forEach(function(it,i){
+    h+='<div class="card"><div class="cnum">'+(i+1)+'</div><div><div class="cname">'+it.label+' · '+it.color+' · '+it.size+'</div><div class="ctags">';
+    h+=it.code?'<span class="tag tcode">'+it.code+'</span>':'<span class="tag tnone">코드없음</span>';
+    if(it.barcode)h+='<span class="tag tbar">'+it.barcode+'</span>';
+    h+='<span class="tag topt">'+it.group+'</span></div></div><div class="cqty">'+it.qty+'<span> 개</span></div><button class="cdel" onclick="delItem('+it.id+')">✕</button></div>';
+  });
+  h+='</div>'; el.innerHTML=h;
+}
+function delItem(id){items=items.filter(function(x){return x.id!==id;});renderList();}
+function clearAll(){if(!items.length)return;if(confirm("전체 항목을 삭제할까요?")){items=[];renderList();}}
+function expCSV(){
+  if(!items.length){showToast("항목을 먼저 추가해주세요");return;}
+  var shipDate=document.getElementById("ship-date").value||document.getElementById("ship-date-text").value||"";
+  var rows=["선적일:"+shipDate,"번호,상품코드,바코드,제품명,색상,사이즈,수량"];
+  items.forEach(function(it,i){rows.push([i+1,it.code,it.barcode,it.label,it.color,it.size,it.qty].join(","));});
+  var csv="\uFEFF"+rows.join("\r\n");
+  var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); a.download="패킹리스트.csv"; a.click();
+  showToast("CSV 저장 완료");
+}
+function expXlsx(){
+  if(!items.length){showToast("항목을 먼저 추가해주세요");return;}
+  var shipDate=document.getElementById("ship-date").value||document.getElementById("ship-date-text").value||"";
+  var data=[["선적일 / 装运日期", shipDate],["번호","상품코드","바코드","제품명","색상","사이즈","수량"]];
+  items.forEach(function(it,i){data.push([i+1,it.code,it.barcode,it.label,it.color,it.size,it.qty]);});
+  var wb=XLSX.utils.book_new(); var ws=XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"]=[{wch:5},{wch:12},{wch:22},{wch:16},{wch:12},{wch:10},{wch:6}];
+  XLSX.utils.book_append_sheet(wb,ws,"패킹리스트"); XLSX.writeFile(wb,"패킹리스트.xlsx");
+  showToast("엑셀 저장 완료");
+}
+function showToast(msg){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2000);}
+init();
+</script>
+</body>
+</html>
